@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Interaction</title>
+</head>
+<body>
+    <h1>Speak and Get a Response</h1>
+    <button id="recordButton">Record</button>
+    <button id="stopButton" disabled>Stop</button>
+    <button id="saveButton" disabled>Save</button>
+    <audio id="recordedAudio" controls></audio>
+    <audio id="responseAudio" controls></audio>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioBlob;
+
+        document.getElementById('recordButton').addEventListener('click', () => {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.start();
+                    console.log('Recording started');
+
+                    mediaRecorder.ondataavailable = event => {
+                        audioChunks.push(event.data);
+                    };
+
+                    mediaRecorder.onstop = () => {
+                        console.log('Recording stopped');
+                        audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
+                        const recordedAudio = document.getElementById('recordedAudio');
+                        recordedAudio.src = audioUrl;
+                        recordedAudio.play();
+                        document.getElementById('saveButton').disabled = false;
+                        console.log('Audio recorded and available for playback');
+                    };
+
+                    audioChunks = [];
+                    document.getElementById('recordButton').disabled = true;
+                    document.getElementById('stopButton').disabled = false;
+                })
+                .catch(error => console.error('Error:', error));
+        });
+
+        document.getElementById('stopButton').addEventListener('click', () => {
+            mediaRecorder.stop();
+            document.getElementById('recordButton').disabled = false;
+            document.getElementById('stopButton').disabled = true;
+        });
+
+        document.getElementById('saveButton').addEventListener('click', async (event) => {
+            event.preventDefault(); // Prevent the page from reloading
+            const formData = new FormData();
+            const filename = 'recorded_audio.wav';
+            formData.append('audio', audioBlob, filename);
+
+            try {
+                console.log('Sending audio file to server...');
+                const response = await fetch('http://localhost:5000/process_audio', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+
+                console.log('Audio file sent to server, awaiting response...');
+                const blob = await response.blob();
+                console.log('Received audio file from server');
+                const audioUrl = URL.createObjectURL(blob);
+                const responseAudio = document.getElementById('responseAudio');
+                responseAudio.src = audioUrl;
+                responseAudio.load();  // Ensure the audio element is loaded
+                responseAudio.play();
+                console.log('Response audio playing');
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Search App</title>
+    <style>
+        iframe {
+            width: 100%;
+            height: 315px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>YouTube Search</h1>
+    <input type="text" id="keyword" placeholder="Enter keyword">
+    <button onclick="search()">Search</button>
+    <div id="results"></div>
+
+    <script>
+        async function search() {
+            const keyword = document.getElementById('keyword').value;
+            if (!keyword) {
+                alert('Please enter a keyword');
+                return;
+            }
+
+            const response = await fetch(`http://localhost:3000/search?keyword=${keyword}`);
+            const results = await response.json();
+
+            const resultsContainer = document.getElementById('results');
+            resultsContainer.innerHTML = '';
+            results.forEach(result => {
+                const iframe = document.createElement('iframe');
+                const videoId = new URL(result.url).searchParams.get('v');
+                iframe.src = `https://www.youtube.com/embed/${videoId}`;
+                iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                iframe.allowFullscreen = true;
+                resultsContainer.appendChild(iframe);
+            });
+        }
+    </script>
+</body>
+</html>

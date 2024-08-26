@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Translation Consolidation App</title>
+</head>
+<body>
+    <h1>Translation Consolidation App</h1>
+    <textarea id="englishText" rows="10" cols="50" placeholder="Enter English sentences separated by new lines..."></textarea>
+    <br>
+    <button id="translateButton">Translate</button>
+    <div id="result"></div>
+
+    <script>
+        document.getElementById('translateButton').addEventListener('click', function() {
+            const englishText = document.getElementById('englishText').value;
+            const sentences = englishText.split('\n').map(sentence => sentence.trim()).filter(sentence => sentence);
+            console.log(sentences);
+
+            fetch('http://127.0.0.1:5000/translate', {  // Ensure this matches your Flask app's URL and port
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ sentences: sentences }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const translations = data.translations;
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = ''; // Clear previous results
+                console.log('result', translations);
+
+                // Create table
+                const table = document.createElement('table');
+                table.border = "1";
+                table.style.width = "100%";
+                table.style.borderCollapse = "collapse";
+
+                // Create table header
+                const header = table.createTHead();
+                const headerRow = header.insertRow(0);
+                const cell1 = headerRow.insertCell(0);
+                const cell2 = headerRow.insertCell(1);
+                const cell3 = headerRow.insertCell(2);
+                cell1.innerHTML = "<b>English</b>";
+                cell2.innerHTML = "<b>Google Translation</b>";
+                cell3.innerHTML = "<b>QuillBot Translation</b>";
+
+                // Insert rows into table
+                const tbody = table.createTBody();
+                for (let i = 0; i < sentences.length; i++) {
+                    const row = tbody.insertRow();
+                    const cell1 = row.insertCell(0);
+                    const cell2 = row.insertCell(1);
+                    const cell3 = row.insertCell(2);
+                    cell1.innerText = sentences[i];
+                    cell2.innerText = translations.google[i];
+                    cell3.innerText = translations.quillbot[i];
+                }
+
+                resultDiv.appendChild(table);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                document.getElementById('result').innerText = 'An error occurred: ' + error.message;
+            });
+        });
+    </script>
+</body>
+</html>
